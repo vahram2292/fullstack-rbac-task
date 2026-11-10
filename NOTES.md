@@ -53,5 +53,5 @@
 
 Built with AI assistance (Claude Code). The template was audited for hidden
 install hooks and disguised files before anything was run.
-The full conversation is in
-[docs/ai-conversations/task-1-rbac.md](./docs/ai-conversations/task-1-rbac.md).
+The conversations are in
+[docs/ai-conversations](./docs/ai-conversations/README.md).
