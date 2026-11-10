@@ -31,6 +31,12 @@ from app.utils import generate_new_account_email, send_email
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+def removes_own_access(current_user: User, changes: UserUpdate) -> bool:
+    is_changing_role = changes.role not in (None, current_user.role)
+    is_deactivating = changes.is_active is False
+    return is_changing_role or is_deactivating
+
+
 @router.get(
     "/",
     dependencies=[Depends(require_permission(Permission.USERS_READ))],
@@ -203,11 +209,13 @@ def update_user(
             status_code=404,
             detail="The user with this id does not exist in the system",
         )
-    # Same reasoning as "admins cannot delete themselves": an admin must not
-    # lock themselves out by giving up their own role.
-    if db_user == current_user and user_in.role not in (None, current_user.role):
+    # Only admins can reach this endpoint, and an admin may not demote,
+    # deactivate or delete themselves. So whoever makes a change is still an
+    # active admin afterwards, and the system always has at least one.
+    if db_user == current_user and removes_own_access(current_user, user_in):
         raise HTTPException(
-            status_code=403, detail="Admins are not allowed to change their own role"
+            status_code=403,
+            detail="Admins are not allowed to remove their own access",
         )
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)

@@ -11,15 +11,16 @@
 
 ## Scope cuts and known gaps
 
-- **End-to-end coverage of roles is thin.** The template's Playwright suite
-  was adapted to the role select and the "Access denied" page and passes
-  locally (62 tests), but only the member-is-denied case is role-specific.
-  The manager's read-only view was checked by hand. Playwright does not run
-  in CI.
-- **No "last admin" count check.** An admin cannot delete their own account
-  (kept from the template) or change their own role, so an admin cannot lock
-  themselves out. Two admins could still demote each other; a check that at
-  least one admin remains would close that.
+- **Playwright runs locally, not in CI.** The template's suite was adapted to
+  the role select and the "Access denied" page, and `roles.spec.ts` adds one
+  browser test per role (what a manager and a member can and cannot see).
+  All pass locally; browser tests were kept out of CI to avoid a slow,
+  flake-prone check.
+- **"At least one admin" is guaranteed by rule, not by counting.** Only admins
+  can change users, and an admin cannot demote, deactivate or delete
+  themselves, so whoever makes a change is still an active admin afterwards.
+  The one gap is two admins demoting each other in the same instant; closing
+  that needs a row lock and was left out.
 - **Tests share the development database** and delete all users at the end.
   This is template behaviour; a separate test database would be the fix.
 - **`FIRST_SUPERUSER` names were kept** in `.env` and the settings. They are
@@ -43,7 +44,7 @@
 
 ## With more time
 
-- Extend the Playwright suite with one test per role and run it in CI.
+- Run the Playwright suite in CI.
 - Runtime-editable roles (permissions in the database) if the product needs it.
 - An audit trail for role changes, not just a log line for denials.
 - Use a router-level guard so a forbidden page does not render the layout first.
