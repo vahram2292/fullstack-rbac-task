@@ -1,7 +1,6 @@
 # Full Stack FastAPI Template
 
-[![Test Docker Compose](../../actions/workflows/test-docker-compose.yml/badge.svg)](../../actions/workflows/test-docker-compose.yml)
-[![Test Backend](../../actions/workflows/test-backend.yml/badge.svg)](../../actions/workflows/test-backend.yml)
+> This is the original README of the template this project is based on. For this project, see [README.md](./README.md). The template's release and deployment workflows are not part of this repository.
 
 ## Technology Stack and Features
 
@@ -25,7 +24,7 @@
 - ✉️ [React Email](https://react.email) for email templates.
 - 📬 [Mailpit](https://mailpit.axllent.org) for local email testing during development.
 - ✅ Tests with [Pytest](https://pytest.org).
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+- 🏭 CI (continuous integration) based on GitHub Actions.
 
 ### Dashboard Login
 

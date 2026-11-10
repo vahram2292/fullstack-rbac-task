@@ -45,6 +45,9 @@ The authorization tests are in
 The suite uses the development database and deletes all users when it finishes
 (template behaviour), so run step 2 again afterwards to get the test users back.
 
+The same lint, type checks and tests run on every pull request
+([.github/workflows/test-backend.yml](./.github/workflows/test-backend.yml)).
+
 ### Database migrations
 
 One migration was added:

@@ -25,8 +25,11 @@
   touched many unrelated files. The user they create has the `admin` role.
 - **The `/admin` URL was kept** for the users page (now titled "Users") to
   avoid breaking links; managers can open it read-only.
-- **Upstream GitHub workflows were removed.** They deploy and release the
-  template itself and need secrets this repository does not have.
+- **CI was trimmed to what applies here.** One workflow runs the backend lint,
+  type checks and tests on every pull request. The template's other workflows
+  (releases, deployments, issue and dependency bots, Playwright) were removed:
+  they maintain the template itself or need secrets this repository does not
+  have.
 
 ## Behaviour changes worth knowing
 
