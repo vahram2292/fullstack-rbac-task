@@ -3,7 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { UserPublic } from "@/client"
 import type { DataTableFeatures } from "@/components/Common/DataTable"
 import { Badge } from "@/components/ui/badge"
-import { ROLE_LABELS } from "@/lib/roles"
+import { ROLE_BADGE_VARIANTS, ROLE_LABELS } from "@/lib/roles"
 import { cn } from "@/lib/utils"
 import { UserActionsMenu } from "./UserActionsMenu"
 
@@ -46,9 +46,7 @@ export const columns: ColumnDef<DataTableFeatures, UserTableData>[] = [
     cell: ({ row }) => {
       const role = row.original.role ?? "member"
       return (
-        <Badge variant={role === "member" ? "secondary" : "default"}>
-          {ROLE_LABELS[role]}
-        </Badge>
+        <Badge variant={ROLE_BADGE_VARIANTS[role]}>{ROLE_LABELS[role]}</Badge>
       )
     },
   },

@@ -8,4 +8,10 @@ export const ROLE_LABELS: Record<Role, string> = {
   member: "Member",
 }
 
+export const ROLE_BADGE_VARIANTS: Record<Role, "default" | "secondary"> = {
+  admin: "default",
+  manager: "default",
+  member: "secondary",
+}
+
 export const ROLES = Object.keys(ROLE_LABELS) as Role[]
