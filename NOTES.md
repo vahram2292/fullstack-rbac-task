@@ -22,9 +22,10 @@
   least one admin remains would close that.
 - **Tests share the development database** and delete all users at the end.
   This is template behaviour; a separate test database would be the fix.
-- **`FIRST_SUPERUSER` names were kept** in `.env`, the settings and the test
-  fixtures. They are deployment configuration and renaming them would have
-  touched many unrelated files. The user they create has the `admin` role.
+- **`FIRST_SUPERUSER` names were kept** in `.env` and the settings. They are
+  deployment configuration that existing environments already set. The user
+  they create has the `admin` role. Test fixtures and test names were renamed
+  to "admin" in a separate, mechanical commit.
 - **The `/admin` URL was kept** for the users page (now titled "Users") to
   avoid breaking links; managers can open it read-only.
 - **CI was trimmed to what applies here.** One workflow runs the backend lint,
