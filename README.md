@@ -5,6 +5,8 @@ Role-based access control (RBAC) added to the
 (FastAPI, SQLModel, PostgreSQL, React, TypeScript).
 The template's own documentation is kept in [TEMPLATE_README.md](./TEMPLATE_README.md);
 scope cuts and trade-offs are in [NOTES.md](./NOTES.md).
+The conversation with the AI tool used to build this is in
+[docs/ai-conversations](./docs/ai-conversations/task-1-rbac.md).
 
 ## Run it locally
 
