@@ -19,11 +19,10 @@ client.setConfig({
   auth: () => localStorage.getItem("access_token") || "",
 })
 
+// Only 401 (not logged in / session expired) ends the session. A 403 means
+// "logged in but not allowed" and is shown to the user where it happens.
 const handleApiError = (error: Error) => {
-  if (
-    error instanceof AxiosError &&
-    [401, 403].includes(error.response?.status ?? 0)
-  ) {
+  if (error instanceof AxiosError && error.response?.status === 401) {
     localStorage.removeItem("access_token")
     window.location.href = "/login"
   }

@@ -55,6 +55,9 @@ const useAuth = () => {
 
   const logout = () => {
     localStorage.removeItem("access_token")
+    // Drop cached data (including the user's permissions) so nothing from
+    // this session is shown to whoever logs in next.
+    queryClient.clear()
     navigate({ to: "/login" })
   }
 
