@@ -1,88 +1,138 @@
-# Full Stack FastAPI Template
+# Role-Aware Access on the Full-Stack FastAPI Template
 
-[![Test Docker Compose](../../actions/workflows/test-docker-compose.yml/badge.svg)](../../actions/workflows/test-docker-compose.yml)
-[![Test Backend](../../actions/workflows/test-backend.yml/badge.svg)](../../actions/workflows/test-backend.yml)
+Role-based access control (RBAC) added to the
+[Full Stack FastAPI Template](https://github.com/fastapi/full-stack-fastapi-template)
+(FastAPI, SQLModel, PostgreSQL, React, TypeScript).
+The template's own documentation is kept in [TEMPLATE_README.md](./TEMPLATE_README.md);
+scope cuts and trade-offs are in [NOTES.md](./NOTES.md).
 
-## Technology Stack and Features
+## Run it locally
 
-- ⚡ [**FastAPI**](https://fastapi.tiangolo.com) for the Python backend API.
-  - 🧰 [SQLModel](https://sqlmodel.tiangolo.com) for the Python SQL database interactions (ORM).
-  - 🔍 [Pydantic](https://docs.pydantic.dev), used by FastAPI, for the data validation and settings management.
-  - 💾 [PostgreSQL](https://www.postgresql.org) as the SQL database.
-- 🚀 [React](https://react.dev) for the frontend.
-  - 🧩 Built into the backend application and served by FastAPI on the same domain as the API.
-  - 💃 Using TypeScript, hooks, [Vite](https://vitejs.dev), and other parts of a modern frontend stack.
-  - 🎨 [Tailwind CSS](https://tailwindcss.com) and [shadcn/ui](https://ui.shadcn.com) for the frontend components.
-  - 🤖 An automatically generated frontend client.
-  - 🧪 [Playwright](https://playwright.dev) for end-to-end testing.
-  - 🦇 Dark mode support.
-- ☁️ [FastAPI Cloud](https://fastapicloud.com) for deployment.
-- 🐋 [Docker Compose](https://www.docker.com) for local services and self-hosted deployment.
-  - 📞 [Traefik](https://traefik.io) as a reverse proxy with automatic HTTPS.
-- 🔒 Secure password hashing by default.
-- 🔑 JWT (JSON Web Token) authentication.
-- 📫 Email-based password recovery.
-- ✉️ [React Email](https://react.email) for email templates.
-- 📬 [Mailpit](https://mailpit.axllent.org) for local email testing during development.
-- ✅ Tests with [Pytest](https://pytest.org).
-- 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
+You only need Docker (with Docker Compose).
 
-### Dashboard Login
+```bash
+# 1. Start the database, the mail catcher and the app (API + built frontend)
+docker compose up -d --build --wait db mailpit backend
 
-![Dashboard login screenshot](img/login.png)
+# 2. Apply database migrations and seed the test users
+docker compose exec backend bash scripts/prestart.sh
+```
 
-### Dashboard - Admin
+Open <http://localhost:8000> (API docs at <http://localhost:8000/docs>).
 
-![Admin dashboard screenshot](img/dashboard.png)
+### Seeded test users
 
-### Dashboard - Items
+Step 2 creates one user per role. All use the password `changethis`
+(`FIRST_SUPERUSER_PASSWORD` in [.env](./.env)).
 
-![Items dashboard screenshot](img/dashboard-items.png)
+| Email | Role |
+|---|---|
+| `admin@example.com` | admin |
+| `manager@example.com` | manager |
+| `member@example.com` | member |
 
-### Dashboard - Dark Mode
+The manager and member accounts are only created when `FASTAPI_ENV=development`
+(the default in `.env`). The command is safe to run again; existing users are left alone.
 
-![Dark mode dashboard screenshot](img/dashboard-dark.png)
+### Run the tests
 
-### React Email Templates
+```bash
+docker compose run --rm --no-deps -v ./backend:/app/backend backend bash scripts/tests-start.sh
+```
 
-![Email templates screenshot](img/react-email.png)
+The authorization tests are in
+[backend/tests/api/routes/test_authorization.py](./backend/tests/api/routes/test_authorization.py).
+The suite uses the development database and deletes all users when it finishes
+(template behaviour), so run step 2 again afterwards to get the test users back.
 
-### Mailpit - Local Email Testing
+### Database migrations
 
-![Mailpit screenshot](img/mailpit.png)
+One migration was added:
+[7b3f2c9d1a54_replace_is_superuser_with_role.py](./backend/app/alembic/versions/7b3f2c9d1a54_replace_is_superuser_with_role.py).
+It adds `user.role`, turns existing superusers into admins and drops
+`is_superuser`. It is applied by step 2 and can be rolled back with
+`docker compose exec backend alembic downgrade -1`.
 
-### Interactive API Documentation
+## Permission matrix
 
-![API docs](img/docs.png)
+| Action | Permission | admin | manager | member |
+|---|---|:-:|:-:|:-:|
+| List users, view any user | `users:read` | ✓ | ✓ | ✗ |
+| Create user | `users:create` | ✓ | ✗ | ✗ |
+| Update any user, including their role | `users:update` | ✓ | ✗ | ✗ |
+| Delete any user | `users:delete` | ✓ | ✗ | ✗ |
+| View metrics | `metrics:read` | ✓ | ✓ | ✗ |
+| See and manage everyone's items | `items:manage_all` | ✓ | ✗ | ✗ |
+| Global settings (send test email, preview recovery email) | `settings:manage` | ✓ | ✗ | ✗ |
+| View and update own profile, manage own items | none needed | ✓ | ✓ | ✓ |
 
-## How to Use It
+New sign-ups are always members. Only someone with `users:update` can change a role.
 
-Click the **Use this template** button at the top of this page to create a new repository.
+## How authorization works
 
-## Backend Development
+**One file defines the model.**
+[backend/app/core/authorization.py](./backend/app/core/authorization.py) holds the
+`Role` and `Permission` enums and `ROLE_PERMISSIONS`, the single map from role to
+permissions. Endpoints never check a role; they ask for a permission. Adding a
+role, or changing what a role may do, is an edit to that one map.
 
-Backend docs: [backend/README.md](./backend/README.md).
+**Checks live in FastAPI dependencies.**
+[backend/app/api/deps.py](./backend/app/api/deps.py) provides
+`require_permission(Permission.X)`, which endpoints declare in their route
+decorator, so the access rule is visible next to the URL. It builds on the
+existing `get_current_user` dependency: a missing or invalid token gives `401`,
+a valid user without the permission gives `403`, and every denial is logged with
+user id, role and permission. Rules that depend on the data (for example "the
+owner of this item, or anyone with `items:manage_all`") use the same
+`has_permission` function inside the endpoint.
 
-## Frontend Development
+**Roles are stored on the user and read on every request.**
+`user.role` is a text column (not a database enum type, so a new role needs no
+schema change). The token only identifies the user; the role is loaded from the
+database per request, so a role change takes effect immediately instead of when
+the token expires. `role` is absent from the self-service schemas
+(`UserRegister`, `UserUpdateMe`), which is what prevents self-promotion.
 
-Frontend docs: [frontend/README.md](./frontend/README.md).
+**The frontend asks the API what the user can do.**
+`GET /users/me` returns the user's `permissions`. The
+[usePermissions](./frontend/src/hooks/usePermissions.ts) hook exposes
+`can("users:create")`; the sidebar filters its links with it, buttons are
+rendered only when allowed, and
+[RequirePermission](./frontend/src/components/Common/RequirePermission.tsx)
+shows an "Access denied" page on direct navigation. The frontend contains no
+role-to-permission logic, so it cannot drift from the backend. It is a
+convenience only: the API enforces every rule regardless of what the UI shows.
 
-## Deployment
+```mermaid
+flowchart LR
+    subgraph Browser
+        UI["Sidebar, buttons, RequirePermission<br/>usePermissions().can(...)"]
+    end
+    subgraph API["FastAPI"]
+        AuthN["get_current_user<br/>valid token? else 401"]
+        AuthZ["require_permission(X)<br/>role grants X? else 403 + log"]
+        Handler["Endpoint<br/>(ownership checks)"]
+        Map[("ROLE_PERMISSIONS<br/>core/authorization.py")]
+    end
+    DB[("PostgreSQL<br/>user.role")]
 
-FastAPI Cloud deployment: [deployment.md](./deployment.md).
+    UI -- "request + Bearer token" --> AuthN --> AuthZ --> Handler
+    AuthN -- "load user" --> DB
+    AuthZ -.-> Map
+    Handler -- "GET /users/me: role + permissions" --> UI
+```
 
-Self-hosted deployment with Docker Compose: [deployment-docker-compose.md](./deployment-docker-compose.md).
+Design decisions are recorded in [docs/adr](./docs/adr):
 
-## Development
+- [ADR 1: Permission-based checks with a central role map](./docs/adr/0001-permission-based-authorization.md)
+- [ADR 2: The frontend gets capabilities from the API](./docs/adr/0002-frontend-capabilities-from-api.md)
 
-General development docs: [development.md](./development.md).
+## Adding a role
 
-This includes the local FastAPI and Vite workflow, Docker Compose services, `.env` configuration, and more.
+1. Add it to `Role` and give it permissions in `ROLE_PERMISSIONS`
+   ([authorization.py](./backend/app/core/authorization.py)).
+2. Regenerate the API client (`bash scripts/generate-client.sh`) and add its
+   label in [frontend/src/lib/roles.ts](./frontend/src/lib/roles.ts); the
+   TypeScript build fails until you do.
 
-## Release Notes
-
-Check the file [release-notes.md](./release-notes.md).
-
-## License
-
-The Full Stack FastAPI Template is licensed under the terms of the MIT license.
+No endpoint, migration or UI guard needs to change.
