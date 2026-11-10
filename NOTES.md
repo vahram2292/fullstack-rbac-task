@@ -11,13 +11,15 @@
 
 ## Scope cuts and known gaps
 
-- **Playwright tests were updated but not run.** The specs that referred to the
-  old "Is superuser?" checkbox were adapted to the role select and the
-  "Access denied" page. The UI was checked by hand in a browser as each of the
-  three roles instead.
-- **No "last admin" protection.** An admin cannot delete their own account
-  (kept from the template), but an admin can still demote themselves or the only
-  other admin. I would add a guard in `update_user`.
+- **End-to-end coverage of roles is thin.** The template's Playwright suite
+  was adapted to the role select and the "Access denied" page and passes
+  locally (62 tests), but only the member-is-denied case is role-specific.
+  The manager's read-only view was checked by hand. Playwright does not run
+  in CI.
+- **No "last admin" count check.** An admin cannot delete their own account
+  (kept from the template) or change their own role, so an admin cannot lock
+  themselves out. Two admins could still demote each other; a check that at
+  least one admin remains would close that.
 - **Tests share the development database** and delete all users at the end.
   This is template behaviour; a separate test database would be the fix.
 - **`FIRST_SUPERUSER` names were kept** in `.env`, the settings and the test
@@ -40,7 +42,7 @@
 
 ## With more time
 
-- Run and extend the Playwright suite with one test per role.
+- Extend the Playwright suite with one test per role and run it in CI.
 - Runtime-editable roles (permissions in the database) if the product needs it.
 - An audit trail for role changes, not just a log line for denials.
 - Use a router-level guard so a forbidden page does not render the layout first.

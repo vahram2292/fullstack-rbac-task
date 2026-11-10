@@ -154,6 +154,32 @@ def test_role_change_by_admin_takes_effect_immediately(
     assert view_metrics(client, member_headers).status_code == 200
 
 
+def test_admin_cannot_change_own_role(
+    client: TestClient, headers_by_role: dict[Role, Headers]
+) -> None:
+    admin_headers = headers_by_role[Role.ADMIN]
+    admin_id = view_own_profile(client, admin_headers).json()["id"]
+
+    response = client.patch(
+        f"{API}/users/{admin_id}", headers=admin_headers, json={"role": "member"}
+    )
+
+    assert response.status_code == 403
+    assert view_own_profile(client, admin_headers).json()["role"] == "admin"
+
+
+def test_role_cannot_be_cleared(
+    client: TestClient, headers_by_role: dict[Role, Headers], db: Session
+) -> None:
+    response = client.patch(
+        f"{API}/users/{create_random_user(db).id}",
+        headers=headers_by_role[Role.ADMIN],
+        json={"role": None},
+    )
+
+    assert response.status_code == 422
+
+
 def test_denied_attempt_is_logged(
     client: TestClient,
     headers_by_role: dict[Role, Headers],

@@ -189,6 +189,7 @@ def read_user_by_id(
 def update_user(
     *,
     session: SessionDep,
+    current_user: CurrentUser,
     user_id: uuid.UUID,
     user_in: UserUpdate,
 ) -> Any:
@@ -201,6 +202,12 @@ def update_user(
         raise HTTPException(
             status_code=404,
             detail="The user with this id does not exist in the system",
+        )
+    # Same reasoning as "admins cannot delete themselves": an admin must not
+    # lock themselves out by giving up their own role.
+    if db_user == current_user and user_in.role not in (None, current_user.role):
+        raise HTTPException(
+            status_code=403, detail="Admins are not allowed to change their own role"
         )
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
